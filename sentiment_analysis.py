@@ -79,24 +79,21 @@ class NB(BaseEstimator, ClassifierMixin):
         self.scores = None
 
     def fit(self, X, y):
-        self.condprob = np.zeros((X.shape[1], 2))
+        self.condprob = np.zeros((2, X.shape[1]))
         for c in [0,1]:
             self.prior[c] = X[y==c].shape[0] / X.shape[0]
-            self.condprob[:,c] = (np.sum(X[y==c], axis=0) +1) / np.sum(np.sum(X[y==c], axis=1)+1)
+            self.condprob[c,:] = (np.sum(X[y==c], axis=0) +1) / np.sum(np.sum(X[y==c], axis=1)+1)
         return self.vocabulary, self.prior, self.condprob
 
 
     def predict(self, X):
         self.scores = np.zeros((X.shape[0], self.prior.shape[0]))
-        self.scores = np.log(self.prior)
-        tmp = np.zeros((X.shape[0], 2))
+        self.scores += np.log(self.prior)
+        tmp = np.zeros((X.shape[0], X.shape[1], 2))
         for c in [0,1]:
-            print(tmp[:,c].shape)
-            print(X.shape)
-            print(self.condprob[:,c].shape)
-            tmp[:,c] = X * self.condprob[:,c]
+            tmp[:,:,c] = np.multiply(X, self.condprob[c,:])
         tmp[tmp==0] = 1
-        self.scores = np.sum(np.log(tmp), axis=1)
+        self.scores += np.sum(np.log(tmp), axis=1)
         return np.argmax(self.scores, axis=1)
 
     def score(self, X, y):
