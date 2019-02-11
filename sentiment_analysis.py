@@ -70,6 +70,48 @@ def count_words(texts):
 
     return vocabulary, counts
 
+    def count_words_V2(texts):
+        """Vectorize text : return count of each word in the text snippets
+
+        Parameters
+        ----------
+        texts : list of str
+            The texts
+
+        Returns
+        -------
+        vocabulary : dict
+            A dictionary that points to an index in counts for each word.
+        counts : ndarray, shape (n_samples, n_features)
+            The counts of each word in each text.
+            n_samples == number of documents.
+            n_features == number of words in vocabulary.
+        """
+        words = set()
+        vocabulary = {}
+        table = str.maketrans({key:" " for key in string.punctuation})
+        i = 0
+        j = 0
+
+        for text in texts:
+            word_list = text.translate(table).lower().split(" ")
+            for word in word_list:
+                if word not in words:
+                    words.add(word)
+                    vocabulary[word] = j
+                    j += 1
+
+        n_features = len(words)
+        counts = np.zeros((len(texts), n_features))
+
+        for text in texts:
+            word_list = text.translate(table).lower().split(" ")
+            for word in word_list:
+                counts[i][vocabulary[word]] += 1
+            i += 1
+
+        return vocabulary, counts
+
 
 class NB(BaseEstimator, ClassifierMixin):
     def __init__(self, vocabulary):
@@ -106,3 +148,30 @@ vocabulary, X = count_words(texts)
 nb = NB(vocabulary)
 nb.fit(X[::2], y[::2])
 print (nb.score(X[1::2], y[1::2]))
+
+# Try to fit, predict and score using cross-validation 5-folds
+
+X_dict = {}
+y_dict = {}
+for i in range(5):
+    X_dict[f"X_{i}"] = X[i::5]
+    y_dict[f"y_{i}"] = y[i::5]
+
+score = 0
+for i in range(5):
+    nb = NB(vocabulary)
+    X_val = X_dict[f"X_{i}"]
+    y_val = y_dict[f"y_{i}"]
+    first = True
+    for j in range(5):
+        if (j!=i):
+            if bool:
+                first = False
+                X_train = X_dict[f"X_{j}"]
+                y_train = y_dict[f"y_{j}"]
+            else:
+                X_train = np.concatenate((X_train, X_dict[f"X_{j}"]), axis=0)
+                y_train = np.concatenate((y_train, y_dict[f"y_{j}"]), axis=0)
+    nb.fit(X_train, y_train)
+    score += nb.score(X_val, y_val)
+print(score/5)
